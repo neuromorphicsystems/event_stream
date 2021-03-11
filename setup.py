@@ -5,10 +5,10 @@ import shutil
 import sys
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-shutil.rmtree(os.path.join(dirname, 'eventstream'), ignore_errors=True)
-os.mkdir(os.path.join(dirname, 'eventstream'))
-for file in ('eventstream.cpp', 'sepia.hpp'):
-    shutil.copy2(os.path.join(dirname, 'source', file), os.path.join(dirname, 'eventstream'))
+shutil.rmtree(os.path.join(dirname, 'event_stream'), ignore_errors=True)
+os.mkdir(os.path.join(dirname, 'event_stream'))
+for file in ('event_stream.cpp', 'sepia.hpp'):
+    shutil.copy2(os.path.join(dirname, 'source', file), os.path.join(dirname, 'event_stream'))
 
 def build_ext_factory(parameters):
     import setuptools.command.build_ext
@@ -24,9 +24,9 @@ with open('README.md') as file:
     long_description = file.read()
 
 setuptools.setup(
-    name='eventstream',
+    name='event_stream',
     version='0.1.0',
-    url='https://github.com/neuromorphicsystems/eventstream',
+    url='https://github.com/neuromorphicsystems/event_stream',
     author='Alexandre Marcireau',
     author_email='alexandre.marcireau@gmail.com',
     description='read event stream files',
@@ -41,9 +41,9 @@ setuptools.setup(
     ],
     ext_modules=[
         distutils.core.Extension(
-            'eventstream',
+            'event_stream',
             language='c++',
-            sources=[os.path.join(dirname, 'source', 'eventstream.cpp')],
+            sources=[os.path.join(dirname, 'source', 'event_stream.cpp')],
             extra_compile_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
             extra_link_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
             include_dirs=[],

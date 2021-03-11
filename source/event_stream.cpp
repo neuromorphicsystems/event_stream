@@ -106,7 +106,7 @@ std::string python_path_to_string(PyObject* path) {
     throw std::runtime_error("path must be a string, bytes, or a path-like object");
 }
 
-/// decoder represents a EventStream file.
+/// decoder represents a Event Stream file.
 struct decoder {
     PyObject_HEAD PyObject* type;
     PyObject* width;
@@ -270,13 +270,13 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
 }
 static PyTypeObject decoder_type = {PyVarObject_HEAD_INIT(nullptr, 0)};
 
-static PyMethodDef eventstream_methods[] = {{nullptr, nullptr, 0, nullptr}};
-static struct PyModuleDef eventstream_definition =
-    {PyModuleDef_HEAD_INIT, "eventstream", "eventstream reads Event Stream files", -1, eventstream_methods};
-PyMODINIT_FUNC PyInit_eventstream() {
-    auto module = PyModule_Create(&eventstream_definition);
+static PyMethodDef event_stream_methods[] = {{nullptr, nullptr, 0, nullptr}};
+static struct PyModuleDef event_stream_definition =
+    {PyModuleDef_HEAD_INIT, "event_stream", "event_stream reads Event Stream files", -1, event_stream_methods};
+PyMODINIT_FUNC PyInit_event_stream() {
+    auto module = PyModule_Create(&event_stream_definition);
     import_array();
-    decoder_type.tp_name = "eventstream.Decoder";
+    decoder_type.tp_name = "event_stream.Decoder";
     decoder_type.tp_basicsize = sizeof(decoder);
     decoder_type.tp_iter = decoder_iter;
     decoder_type.tp_iternext = decoder_iternext;

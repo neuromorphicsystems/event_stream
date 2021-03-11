@@ -2,17 +2,17 @@
 
 Event Stream is a fast and buffered Event Stream python reader, with a C++ underlying implementation.
 
-Run `pip install eventstream` to install it.
+Run `pip install event_stream` to install it.
 
 # Documentation
 
-The `eventstream` library provides a single class: `Decoder`. A decoder object is created by passing a file name to `Decoder`. The file name must be a [path-like object](https://docs.python.org/3/glossary.html#term-path-like-object).
+The `event_stream` library provides a single class: `Decoder`. A decoder object is created by passing a file name to `Decoder`. The file name must be a [path-like object](https://docs.python.org/3/glossary.html#term-path-like-object).
 
 Here's a short example:
 ```python
-import eventstream
+import event_stream
 
-decoder = eventstream.Decoder('/path/to/file.es')
+decoder = event_stream.Decoder('/path/to/file.es')
 if decoder.type == 'generic':
     print('generic events')
 else:
@@ -25,9 +25,9 @@ for packet in decoder:
 And the same example with detailed comments:
 
 ```python
-import eventstream
+import event_stream
 
-decoder = eventstream.Decoder('/path/to/file.aedat')
+decoder = event_stream.Decoder('/path/to/file.aedat')
 """
 decoder is a packet iterator with 3 additional properties: type, width and height
 type is one of 'generic', 'dvs', 'atis' and 'color'
@@ -54,7 +54,7 @@ for packet in decoder:
 
 To format the code, run:
 ```sh
-clang-format -i source/sepia.hpp source/eventstream.cpp
+clang-format -i source/sepia.hpp source/event_stream.cpp
 ```
 
 # Publish
