@@ -1,0 +1,6 @@
+eventstream
+build
+dist
+.eggs
+*__pycache__
+*.egg-info
