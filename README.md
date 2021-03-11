@@ -59,7 +59,9 @@ clang-format -i source/sepia.hpp source/event_stream.cpp
 
 # Publish
 
+The version number can be changed in *setup.py*.
+
 ```sh
 python3 setup.py sdist
-
+twine upload dist/*
 ```
