@@ -13,21 +13,6 @@ Here's a short example:
 import event_stream
 
 decoder = event_stream.Decoder('/path/to/file.es')
-if decoder.type == 'generic':
-    print('generic events')
-else:
-    print(f'{decoder.type} events, {decoder.width} x {decoder.height} sensor')
-
-for packet in decoder:
-    print('{} events, ts = [{} µs, {} µs]'.format(len(packet), packet['t'][0], packet['t'][-1]))
-```
-
-And the same example with detailed comments:
-
-```python
-import event_stream
-
-decoder = event_stream.Decoder('/path/to/file.aedat')
 """
 decoder is a packet iterator with 3 additional properties: type, width and height
 type is one of 'generic', 'dvs', 'atis' and 'color'
