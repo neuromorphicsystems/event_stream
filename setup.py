@@ -5,10 +5,10 @@ import shutil
 import sys
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-shutil.rmtree(os.path.join(dirname, 'event_stream'), ignore_errors=True)
-os.mkdir(os.path.join(dirname, 'event_stream'))
-for file in ('event_stream.cpp', 'sepia.hpp'):
-    shutil.copy2(os.path.join(dirname, 'source', file), os.path.join(dirname, 'event_stream'))
+#shutil.rmtree(os.path.join(dirname, 'event_stream'), ignore_errors=True)
+#os.mkdir(os.path.join(dirname, 'event_stream'))
+#for file in ('event_stream.cpp', 'sepia.hpp'):
+#    shutil.copy2(os.path.join(dirname, 'source', file), os.path.join(dirname, 'event_stream'))
 
 def build_ext_factory(parameters):
     import setuptools.command.build_ext
@@ -25,7 +25,7 @@ with open('README.md') as file:
 
 setuptools.setup(
     name='event_stream',
-    version='0.1.0',
+    version='0.2.0',
     url='https://github.com/neuromorphicsystems/event_stream',
     author='Alexandre Marcireau',
     author_email='alexandre.marcireau@gmail.com',

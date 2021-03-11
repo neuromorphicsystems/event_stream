@@ -54,7 +54,7 @@ for packet in decoder:
 
 To format the code, run:
 ```sh
-clang-format -i source/sepia.hpp source/event_stream.cpp
+clang-format -i source/sepia.h source/event_stream.cpp
 ```
 
 # Publish
@@ -62,6 +62,7 @@ clang-format -i source/sepia.hpp source/event_stream.cpp
 The version number can be changed in *setup.py*.
 
 ```sh
+rm -rf dist
 python3 setup.py sdist
 twine upload dist/*
 ```

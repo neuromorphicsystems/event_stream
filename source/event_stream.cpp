@@ -4,8 +4,6 @@
 #include "sepia.hpp"
 #include <numpy/arrayobject.h>
 
-#include <iostream> // @DEV
-
 /// description represents a named type with an offset.
 struct description {
     std::string name;
