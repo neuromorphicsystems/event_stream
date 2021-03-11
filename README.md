@@ -1,6 +1,6 @@
 # Event Stream
 
-Event Stream is a fast and buffered Event Stream python reader, with a C++ underlying implementation.
+Event Stream is a fast and buffered [Event Stream](http://github.com/neuromorphic-paris/event_stream) python reader, with a C++ underlying implementation.
 
 Run `pip install event_stream` to install it.
 
