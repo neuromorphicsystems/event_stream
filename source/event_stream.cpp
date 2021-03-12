@@ -276,6 +276,7 @@ PyMODINIT_FUNC PyInit_event_stream() {
     import_array();
     decoder_type.tp_name = "event_stream.Decoder";
     decoder_type.tp_basicsize = sizeof(decoder);
+    decoder_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
     decoder_type.tp_iter = decoder_iter;
     decoder_type.tp_iternext = decoder_iternext;
     decoder_type.tp_methods = decoder_methods;
