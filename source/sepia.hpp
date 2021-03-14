@@ -467,7 +467,7 @@ namespace sepia {
         virtual ~split() {}
 
         /// operator() handles an event.
-        virtual void operator()(dvs_event dvs_event) {
+        void operator()(dvs_event dvs_event) {
             if (dvs_event.on) {
                 _handle_increase_event(simple_event{dvs_event.t, dvs_event.x, dvs_event.y});
             } else {
@@ -490,10 +490,10 @@ namespace sepia {
             HandleExposure&& handle_exposure) :
             _handle_dvs_event(std::forward<HandleDvsEvent>(handle_dvs_event)),
             _handle_exposure(std::forward<HandleExposure>(handle_exposure)) {}
-        split<type::atis, HandleDvsEvent, HandleExposure>(
-            const split<type::atis, HandleDvsEvent, HandleExposure>&) = delete;
-        split<type::atis, HandleDvsEvent, HandleExposure>(
-            split<type::atis, HandleDvsEvent, HandleExposure>&&) = default;
+        split<type::atis, HandleDvsEvent, HandleExposure>(const split<type::atis, HandleDvsEvent, HandleExposure>&) =
+            delete;
+        split<type::atis, HandleDvsEvent, HandleExposure>(split<type::atis, HandleDvsEvent, HandleExposure>&&) =
+            default;
         split<type::atis, HandleDvsEvent, HandleExposure>&
         operator=(const split<type::atis, HandleDvsEvent, HandleExposure>&) = delete;
         split<type::atis, HandleDvsEvent, HandleExposure>&
@@ -501,7 +501,7 @@ namespace sepia {
         virtual ~split<type::atis, HandleDvsEvent, HandleExposure>() {}
 
         /// operator() handles an event.
-        virtual void operator()(atis_event current_atis_event) {
+        void operator()(atis_event current_atis_event) {
             if (current_atis_event.exposure) {
                 _handle_exposure(exposure{
                     current_atis_event.t, current_atis_event.x, current_atis_event.y, current_atis_event.polarity});
@@ -526,6 +526,16 @@ namespace sepia {
             std::forward<HandleSecondSpecializedEvent>(handle_second_specialized_event));
     }
 
+    /// event_size returns the number of bytes required to encode an event.
+    template <type event_stream_type>
+    uint8_t event_size(event<event_stream_type>);
+
+    /// keyframe associates a number of bytes and a timestamp.
+    struct keyframe {
+        std::size_t offset;
+        uint64_t t;
+    };
+
     /// handle_byte implements an event stream state machine.
     template <type event_stream_type>
     class handle_byte;
@@ -535,7 +545,7 @@ namespace sepia {
     template <>
     class handle_byte<type::generic> {
         public:
-        handle_byte() : _state(state::idle), _index(0), _bytes_size(0) {}
+        handle_byte() : _state(state::idle), _index(0), _bytes_size(0), _relative_keyframe(keyframe{0, 0}) {}
         handle_byte(uint16_t, uint16_t) : handle_byte() {}
         handle_byte(const handle_byte&) = default;
         handle_byte(handle_byte&&) = default;
@@ -544,14 +554,22 @@ namespace sepia {
         virtual ~handle_byte() {}
 
         /// operator() handles a byte.
-        virtual bool operator()(uint8_t byte, generic_event& generic_event) {
+        bool operator()(uint8_t byte, generic_event& generic_event) {
+            ++_relative_keyframe.offset;
             switch (_state) {
                 case state::idle:
                     if (byte == 0b11111111) {
                         generic_event.t += 0b11111110;
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = generic_event.t;
                     } else if (byte != 0b11111110) {
+                        _relative_keyframe.offset = 1;
+                        _relative_keyframe.t = generic_event.t;
                         generic_event.t += byte;
                         _state = state::byte0;
+                    } else {
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = generic_event.t;
                     }
                     break;
                 case state::byte0:
@@ -583,10 +601,16 @@ namespace sepia {
         }
 
         /// reset initializes the state machine.
-        virtual void reset() {
+        void reset() {
             _state = state::idle;
             _index = 0;
             _bytes_size = 0;
+        }
+
+        /// relative_keyframe returns the number of bytes consummed since the last event boundary,
+        /// and the timestamp of the last event.
+        keyframe relative_keyframe() const {
+            return _relative_keyframe;
         }
 
         protected:
@@ -600,6 +624,7 @@ namespace sepia {
         state _state;
         std::size_t _index;
         std::size_t _bytes_size;
+        keyframe _relative_keyframe;
     };
 
     /// handle_byte<type::dvs> implements the event stream state machine for DVS
@@ -607,8 +632,8 @@ namespace sepia {
     template <>
     class handle_byte<type::dvs> {
         public:
-        handle_byte() = default;
-        handle_byte(uint16_t width, uint16_t height) : _width(width), _height(height), _state(state::idle) {}
+        handle_byte(uint16_t width, uint16_t height) :
+            _width(width), _height(height), _state(state::idle), _relative_keyframe(keyframe{0, 0}) {}
         handle_byte(const handle_byte&) = default;
         handle_byte(handle_byte&&) = default;
         handle_byte& operator=(const handle_byte&) = default;
@@ -616,15 +641,23 @@ namespace sepia {
         virtual ~handle_byte() {}
 
         /// operator() handles a byte.
-        virtual bool operator()(uint8_t byte, dvs_event& dvs_event) {
+        bool operator()(uint8_t byte, dvs_event& dvs_event) {
+            ++_relative_keyframe.offset;
             switch (_state) {
                 case state::idle:
                     if (byte == 0b11111111) {
                         dvs_event.t += 0b1111111;
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = dvs_event.t;
                     } else if (byte != 0b11111110) {
+                        _relative_keyframe.offset = 1;
+                        _relative_keyframe.t = dvs_event.t;
                         dvs_event.t += (byte >> 1);
                         dvs_event.on = ((byte & 1) == 1);
                         _state = state::byte0;
+                    } else {
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = dvs_event.t;
                     }
                     break;
                 case state::byte0:
@@ -654,8 +687,14 @@ namespace sepia {
         }
 
         /// reset initializes the state machine.
-        virtual void reset() {
+        void reset() {
             _state = state::idle;
+        }
+
+        /// relative_keyframe returns the number of bytes consummed since the last event boundary,
+        /// and the timestamp of the last event.
+        keyframe relative_keyframe() const {
+            return _relative_keyframe;
         }
 
         protected:
@@ -671,6 +710,7 @@ namespace sepia {
         uint16_t _width;
         uint16_t _height;
         state _state;
+        keyframe _relative_keyframe;
     };
 
     /// handle_byte<type::atis> implements the event stream state machine for ATIS
@@ -678,8 +718,8 @@ namespace sepia {
     template <>
     class handle_byte<type::atis> {
         public:
-        handle_byte() = default;
-        handle_byte(uint16_t width, uint16_t height) : _width(width), _height(height), _state(state::idle) {}
+        handle_byte(uint16_t width, uint16_t height) :
+            _width(width), _height(height), _state(state::idle), _relative_keyframe(keyframe{0, 0}) {}
         handle_byte(const handle_byte&) = default;
         handle_byte(handle_byte&&) = default;
         handle_byte& operator=(const handle_byte&) = default;
@@ -687,12 +727,17 @@ namespace sepia {
         virtual ~handle_byte() {}
 
         /// operator() handles a byte.
-        virtual bool operator()(uint8_t byte, atis_event& atis_event) {
+        bool operator()(uint8_t byte, atis_event& atis_event) {
+            ++_relative_keyframe.offset;
             switch (_state) {
                 case state::idle:
                     if ((byte & 0b11111100) == 0b11111100) {
                         atis_event.t += static_cast<uint64_t>(0b111111) * (byte & 0b11);
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = atis_event.t;
                     } else {
+                        _relative_keyframe.offset = 1;
+                        _relative_keyframe.t = atis_event.t;
                         atis_event.t += (byte >> 2);
                         atis_event.exposure = ((byte & 1) == 1);
                         atis_event.polarity = ((byte & 0b10) == 0b10);
@@ -726,8 +771,14 @@ namespace sepia {
         }
 
         /// reset initializes the state machine.
-        virtual void reset() {
+        void reset() {
             _state = state::idle;
+        }
+
+        /// relative_keyframe returns the number of bytes consummed since the last event boundary,
+        /// and the timestamp of the last event.
+        keyframe relative_keyframe() const {
+            return _relative_keyframe;
         }
 
         protected:
@@ -743,6 +794,7 @@ namespace sepia {
         uint16_t _width;
         uint16_t _height;
         state _state;
+        keyframe _relative_keyframe;
     };
 
     /// handle_byte<type::color> implements the event stream state machine for color
@@ -751,7 +803,8 @@ namespace sepia {
     class handle_byte<type::color> {
         public:
         handle_byte() = default;
-        handle_byte(uint16_t width, uint16_t height) : _width(width), _height(height), _state(state::idle) {}
+        handle_byte(uint16_t width, uint16_t height) :
+            _width(width), _height(height), _state(state::idle), _relative_keyframe(keyframe{0, 0}) {}
         handle_byte(const handle_byte&) = default;
         handle_byte(handle_byte&&) = default;
         handle_byte& operator=(const handle_byte&) = default;
@@ -759,14 +812,22 @@ namespace sepia {
         virtual ~handle_byte() {}
 
         /// operator() handles a byte.
-        virtual bool operator()(uint8_t byte, color_event& color_event) {
+        bool operator()(uint8_t byte, color_event& color_event) {
+            ++_relative_keyframe.offset;
             switch (_state) {
                 case state::idle: {
                     if (byte == 0b11111111) {
                         color_event.t += 0b11111110;
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = color_event.t;
                     } else if (byte != 0b11111110) {
+                        _relative_keyframe.offset = 1;
+                        _relative_keyframe.t = color_event.t;
                         color_event.t += byte;
                         _state = state::byte0;
+                    } else {
+                        _relative_keyframe.offset = 0;
+                        _relative_keyframe.t = color_event.t;
                     }
                     break;
                 }
@@ -816,8 +877,14 @@ namespace sepia {
         }
 
         /// reset initializes the state machine.
-        virtual void reset() {
+        void reset() {
             _state = state::idle;
+        }
+
+        /// relative_keyframe returns the number of bytes consummed since the last event boundary,
+        /// and the timestamp of the last event.
+        keyframe relative_keyframe() const {
+            return _relative_keyframe;
         }
 
         protected:
@@ -836,6 +903,7 @@ namespace sepia {
         uint16_t _width;
         uint16_t _height;
         state _state;
+        keyframe _relative_keyframe;
     };
 
     /// write_to_reference converts and writes events to a non-owned byte stream.
@@ -858,7 +926,7 @@ namespace sepia {
         virtual ~write_to_reference() {}
 
         /// operator() handles an event.
-        virtual void operator()(generic_event current_generic_event) {
+        void operator()(generic_event current_generic_event) {
             if (current_generic_event.t < _previous_t) {
                 throw std::logic_error("the event's timestamp is smaller than the previous one's");
             }
@@ -900,7 +968,7 @@ namespace sepia {
         virtual ~write_to_reference() {}
 
         /// operator() handles an event.
-        virtual void operator()(dvs_event current_dvs_event) {
+        void operator()(dvs_event current_dvs_event) {
             if (current_dvs_event.x >= _width || current_dvs_event.y >= _height) {
                 throw coordinates_overflow();
             }
@@ -949,7 +1017,7 @@ namespace sepia {
         virtual ~write_to_reference() {}
 
         /// operator() handles an event.
-        virtual void operator()(atis_event current_atis_event) {
+        void operator()(atis_event current_atis_event) {
             if (current_atis_event.x >= _width || current_atis_event.y >= _height) {
                 throw coordinates_overflow();
             }
@@ -1004,7 +1072,7 @@ namespace sepia {
         virtual ~write_to_reference() {}
 
         /// operator() handles an event.
-        virtual void operator()(color_event current_color_event) {
+        void operator()(color_event current_color_event) {
             if (current_color_event.x >= _width || current_color_event.y >= _height) {
                 throw coordinates_overflow();
             }
@@ -1058,7 +1126,7 @@ namespace sepia {
         virtual ~write() {}
 
         /// operator() handles an event.
-        virtual void operator()(event<event_stream_type> event) {
+        void operator()(event<event_stream_type> event) {
             _write_to_reference(event);
         }
 
@@ -1067,22 +1135,21 @@ namespace sepia {
         write_to_reference<event_stream_type> _write_to_reference;
     };
 
-    class generic_observable {
+    class any_observable {
         public:
-        generic_observable() = default;
-        generic_observable(const generic_observable&) = default;
-        generic_observable(generic_observable&&) = default;
-        generic_observable& operator=(const generic_observable&) = default;
-        generic_observable& operator=(generic_observable&&) = default;
+        any_observable() = default;
+        any_observable(const any_observable&) = default;
+        any_observable(any_observable&&) = default;
+        any_observable& operator=(const any_observable&) = default;
+        any_observable& operator=(any_observable&&) = default;
     };
 
     /// observable reads bytes from a stream and dispatches events.
     template <type event_stream_type>
-    class observable : public generic_observable {
+    class observable : public any_observable {
         public:
         observable(std::unique_ptr<std::istream> event_stream) :
-            generic_observable(),
-            _event_stream(std::move(event_stream)) {
+            any_observable(), _event_stream(std::move(event_stream)), _handle_byte(0, 0) {
             const auto header = read_header(*_event_stream);
             if (header.event_stream_type != event_stream_type) {
                 throw unsupported_event_type();
@@ -1098,28 +1165,28 @@ namespace sepia {
 
         /// next yields a new event buffer.
         /// The chunk size is the number of bytes read, not the number of events.
+        /// next always return a non-empty buffer until end-of-file is reached.
         const std::vector<sepia::event<event_stream_type>>& next(std::size_t chunk_size = 1 << 16) {
+            _bytes.resize(chunk_size);
             _buffer.clear();
             _buffer.reserve(chunk_size);
-            std::vector<uint8_t> bytes(chunk_size);
             for (;;) {
-                _event_stream->read(reinterpret_cast<char*>(bytes.data()), bytes.size());
+                _event_stream->read(reinterpret_cast<char*>(_bytes.data()), _bytes.size());
                 if (_event_stream->eof()) {
-                    for (auto byte_iterator = bytes.begin();
-                            byte_iterator
-                            != std::next(
-                                bytes.begin(),
-                                static_cast<
-                                    std::iterator_traits<std::vector<uint8_t>::iterator>::difference_type>(
-                                    _event_stream->gcount()));
-                            ++byte_iterator) {
+                    for (auto byte_iterator = _bytes.begin();
+                         byte_iterator
+                         != std::next(
+                             _bytes.begin(),
+                             static_cast<std::iterator_traits<std::vector<uint8_t>::iterator>::difference_type>(
+                                 _event_stream->gcount()));
+                         ++byte_iterator) {
                         if (_handle_byte(*byte_iterator, _event)) {
                             _buffer.push_back(_event);
                         }
                     }
                     break;
                 } else {
-                    for (auto byte : bytes) {
+                    for (auto byte : _bytes) {
                         if (_handle_byte(byte, _event)) {
                             _buffer.push_back(_event);
                         }
@@ -1134,8 +1201,9 @@ namespace sepia {
 
         protected:
         std::unique_ptr<std::istream> _event_stream;
-        event<event_stream_type> _event;
         handle_byte<event_stream_type> _handle_byte;
+        event<event_stream_type> _event;
+        std::vector<uint8_t> _bytes;
         std::vector<sepia::event<event_stream_type>> _buffer;
     };
 
@@ -1143,5 +1211,129 @@ namespace sepia {
     template <type event_stream_type>
     inline std::unique_ptr<observable<event_stream_type>> make_observable(std::unique_ptr<std::istream> event_stream) {
         return sepia::make_unique<observable<event_stream_type>>(std::move(event_stream));
+    }
+
+    /// indexed_observable reads bytes from a stream and dispatches events.
+    /// An index is built during construction to seek arbitrary parts of the file.
+    template <type event_stream_type>
+    class indexed_observable : public any_observable {
+        public:
+        indexed_observable(
+            std::unique_ptr<std::istream> event_stream,
+            uint64_t keyframe_duration,
+            std::size_t chunk_size) :
+            any_observable(), _event_stream(std::move(event_stream)), _handle_byte(0, 0) {
+            const auto header = read_header(*_event_stream);
+            if (header.event_stream_type != event_stream_type) {
+                throw unsupported_event_type();
+            }
+            _event = event<event_stream_type>{};
+            _handle_byte = handle_byte<event_stream_type>(header.width, header.height);
+            auto position = static_cast<std::size_t>(static_cast<std::streamoff>(_event_stream->tellg()));
+            std::size_t byte_index = 0;
+            uint64_t next_threshold = 0;
+            auto handle_event = [&]() {
+                if (_keyframes.empty()) {
+                    auto relative_keyframe = _handle_byte.relative_keyframe();
+                    next_threshold = relative_keyframe.t + keyframe_duration;
+                    relative_keyframe.offset = position + byte_index - relative_keyframe.offset;
+                    _keyframes.push_back(relative_keyframe);
+                } else if (_event.t >= next_threshold) {
+                    auto relative_keyframe = _handle_byte.relative_keyframe();
+                    relative_keyframe.offset = position + byte_index - relative_keyframe.offset;
+                    const auto overflows = 1 + (_event.t - next_threshold) / keyframe_duration;
+                    for (std::size_t index = 0; index < overflows; ++index) {
+                        _keyframes.push_back(relative_keyframe);
+                    }
+                    next_threshold += keyframe_duration * overflows;
+                }
+            };
+            _bytes.resize(chunk_size);
+            for (;;) {
+                _event_stream->read(reinterpret_cast<char*>(_bytes.data()), _bytes.size());
+                byte_index = 0;
+                if (_event_stream->eof()) {
+                    for (auto byte_iterator = _bytes.begin();
+                         byte_iterator
+                         != std::next(
+                             _bytes.begin(),
+                             static_cast<std::iterator_traits<std::vector<uint8_t>::iterator>::difference_type>(
+                                 _event_stream->gcount()));
+                         ++byte_iterator) {
+                        ++byte_index;
+                        if (_handle_byte(*byte_iterator, _event)) {
+                            handle_event();
+                        }
+                    }
+                    break;
+                } else {
+                    for (auto byte : _bytes) {
+                        ++byte_index;
+                        if (_handle_byte(byte, _event)) {
+                            handle_event();
+                        }
+                    }
+                }
+                position += _bytes.size();
+            }
+            _keyframes.push_back({position + byte_index, 0});
+            _event_stream->clear();
+            _event_stream->seekg(_keyframes.front().offset);
+            _handle_byte.reset();
+            _event.t = _keyframes.front().t;
+        }
+
+        indexed_observable(const indexed_observable&) = delete;
+        indexed_observable(indexed_observable&&) = default;
+        indexed_observable& operator=(const indexed_observable&) = delete;
+        indexed_observable& operator=(indexed_observable&&) = default;
+        virtual ~indexed_observable() {}
+
+        /// keyframes returns the number of possible ckunks.
+        /// The largest valid keyframe index is keyframes - 1.
+        std::size_t keyframes() const {
+            return _keyframes.size() - 1;
+        }
+
+        /// chunk retrieves the events in the range [keyframe_index, keyframe_index + 1[.
+        const std::vector<sepia::event<event_stream_type>>& chunk(std::size_t keyframe_index) {
+            if (keyframe_index >= _keyframes.size() - 1) {
+                throw std::runtime_error(
+                    std::string("the keyframe index must in the range [0, ") + std::to_string(_keyframes.size() - 2)
+                    + "]");
+            }
+            const auto keyframe = _keyframes[keyframe_index];
+            _event_stream->seekg(keyframe.offset);
+            _handle_byte.reset();
+            _event.t = keyframe.t;
+            _bytes.resize(_keyframes[keyframe_index + 1].offset - keyframe.offset);
+            _event_stream->read(reinterpret_cast<char*>(_bytes.data()), _bytes.size());
+            _buffer.clear();
+            _buffer.reserve(_bytes.size());
+            for (auto byte : _bytes) {
+                if (_handle_byte(byte, _event)) {
+                    _buffer.push_back(_event);
+                }
+            }
+            return _buffer;
+        }
+
+        protected:
+        std::unique_ptr<std::istream> _event_stream;
+        handle_byte<event_stream_type> _handle_byte;
+        event<event_stream_type> _event;
+        std::vector<uint8_t> _bytes;
+        std::vector<sepia::event<event_stream_type>> _buffer;
+        std::vector<keyframe> _keyframes;
+    };
+
+    /// make_indexed_observable creates a smart pointer to an indexed event stream observable.
+    template <type event_stream_type>
+    inline std::unique_ptr<indexed_observable<event_stream_type>> make_indexed_observable(
+        std::unique_ptr<std::istream> event_stream,
+        uint64_t keyframe_duration,
+        std::size_t chunk_size = 1 << 16) {
+        return sepia::make_unique<indexed_observable<event_stream_type>>(
+            std::move(event_stream), keyframe_duration, chunk_size);
     }
 }
