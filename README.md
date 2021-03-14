@@ -33,6 +33,7 @@ else:
 #     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('on', '?')]
 #     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('exposure', '?'), ('polarity', '?')]
 #     color: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('r', '?'), ('g', '?'), ('b', '?')]
+# chunk always contains at least one event
 for chunk in decoder:
     print('{} events, ts = [{} µs, {} µs]'.format(len(chunk), chunk['t'][0], chunk['t'][-1]))
 ```
@@ -52,8 +53,8 @@ if decoder.type == 'generic':
 else:
     print(f'{decoder.type} events, {decoder.width} x {decoder.height} sensor')
 
-keyframes = decoder.keyframes()
 # number of generated keyframes (one every 40000 µs here)
+keyframes = decoder.keyframes()
 
 for keyframe_index in range(0, keyframes):
     # keyframe_index must be in the range [0, keyframes[
@@ -65,6 +66,7 @@ for keyframe_index in range(0, keyframes):
     #     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('on', '?')]
     #     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('exposure', '?'), ('polarity', '?')]
     #     color: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('r', '?'), ('g', '?'), ('b', '?')]
+    # chunk may be empty
     chunk = decoder.chunk(keyframe_index)
     if len(chunk) > 0:
         print('{} / {}, {} events, ts = [{} µs, {} µs]'.format(
