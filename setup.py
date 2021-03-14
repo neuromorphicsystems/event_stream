@@ -5,11 +5,6 @@ import shutil
 import sys
 dirname = os.path.dirname(os.path.realpath(__file__))
 
-#shutil.rmtree(os.path.join(dirname, 'event_stream'), ignore_errors=True)
-#os.mkdir(os.path.join(dirname, 'event_stream'))
-#for file in ('event_stream.cpp', 'sepia.hpp'):
-#    shutil.copy2(os.path.join(dirname, 'source', file), os.path.join(dirname, 'event_stream'))
-
 def build_ext_factory(parameters):
     import setuptools.command.build_ext
     class build_ext(setuptools.command.build_ext.build_ext):
