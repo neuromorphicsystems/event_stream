@@ -8,9 +8,9 @@ Run `pip install event_stream` to install it.
 
 The `event_stream` library provides two classes: `Decoder` and `IndexedDecoder`:
 - `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
-- `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index that can be used afterwards to fetch events at arbitrary timestamps
+- `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index, and can be used to fetch events at arbitrary timestamps
 
-Use `Decoder` if you want to process every event in order without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example in a file player with a cliackable timeline.
+Use `Decoder` if you want to process every event without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example in a file player with a cliackable timeline.
 
 The first argument to `Decoder` and `IndexedDecoder` is a file name. It must be a [path-like object](https://docs.python.org/3/glossary.html#term-path-like-object). `IndexedDecoder` takes a second argument, the keyframe duration in µs.
 
@@ -18,6 +18,7 @@ Here's a `Decoder` example:
 ```python
 import event_stream
 
+# Decoder's only argument must be the path of an Event Stream file
 # decoder is an iterator with 3 additional properties: type, width and height
 #     type is one of 'generic', 'dvs', 'atis' and 'color'
 #     if type is 'generic', both width and height are None
@@ -43,6 +44,10 @@ Here's an `IndexedDecoder` example:
 ```python
 import event_stream
 
+# Decoder's first argument must be the path of an Event Stream file
+#     its second argument is the duration of each keyframe in µs.
+#     the first keyframe starts with the first event
+#     all the keyframes are offset accordingly
 # decoder is an object with 3 properties: type, width and height and two methods: keyframes and chunk
 #     type is one of 'generic', 'dvs', 'atis' and 'color'
 #     if type is 'generic', both width and height are None
