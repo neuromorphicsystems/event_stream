@@ -18,7 +18,7 @@ Here's a `Decoder` example:
 ```python
 import event_stream
 
-# Decoder's only argument must be the path of an Event Stream file
+# Decoder's only argument is an Event Stream file path
 # decoder is an iterator with 3 additional properties: type, width and height
 #     type is one of 'generic', 'dvs', 'atis' and 'color'
 #     if type is 'generic', both width and height are None
@@ -44,14 +44,15 @@ Here's an `IndexedDecoder` example:
 ```python
 import event_stream
 
-# Decoder's first argument must be the path of an Event Stream file
-#     its second argument is the duration of each keyframe in µs.
+# IndexedDecoder's first argument is an Event Stream file path
+#     its second argument is the duration of each keyframe in µs
 #     the first keyframe starts with the first event
 #     all the keyframes are offset accordingly
-# decoder is an object with 3 properties: type, width and height and two methods: keyframes and chunk
+# decoder is an object with 3 properties: type, width and height 
 #     type is one of 'generic', 'dvs', 'atis' and 'color'
 #     if type is 'generic', both width and height are None
 #     otherwise, width and height represent the sensor size in pixels
+# decoder has two methods: keyframes and chunk
 decoder = event_stream.IndexedDecoder('/path/to/file.es', 40000)
 if decoder.type == 'generic':
     print('generic events')
