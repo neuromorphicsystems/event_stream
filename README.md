@@ -10,7 +10,7 @@ The `event_stream` library provides two classes: `Decoder` and `IndexedDecoder`:
 - `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
 - `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index, and can be used to fetch events at arbitrary timestamps
 
-Use `Decoder` if you want to process every event without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example in a file player with a cliackable timeline.
+Use `Decoder` if you want to process every event without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example if your are writing a file player with a clickable timeline.
 
 The first argument to `Decoder` and `IndexedDecoder` is a file name. It must be a [path-like object](https://docs.python.org/3/glossary.html#term-path-like-object). `IndexedDecoder` takes a second argument, the keyframe duration in µs.
 
