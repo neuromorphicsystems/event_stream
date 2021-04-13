@@ -137,13 +137,14 @@ encoder.write(second_chunk)
 
 ## Setup
 
-After downloading the present repository ([zip file](https://github.com/neuromorphicsystems/event_stream/archive/refs/heads/main.zip)), run the following commands in Matlab:
+After downloading this repository ([zip file](https://github.com/neuromorphicsystems/event_stream/archive/refs/heads/main.zip)), run the following commands in Matlab:
 ```js
-cd /path/to/event_stream/matlab
+cd /path/to/event_stream
+cd matlab
 mex event_stream_decode.cpp
 mex event_stream_encode.cpp
 ```
-The two generated files (extension `.mexa64`, `.mexmaci64` or `mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode` and `event_stream_encode`. You can remove the rest of the repositrory from your machine if you want.
+The two generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode` and `event_stream_encode`. You can remove the rest of the repositrory from your machine if you want.
 
 
 ## Documentation
