@@ -12,7 +12,6 @@
 #include <mutex>
 #include <stdexcept>
 #include <string>
-#include <thread>
 #include <tuple>
 #include <unordered_map>
 #include <unordered_set>
@@ -41,7 +40,7 @@ std::string SEPIA_TRANSLATE(std::string filename) {
 #endif
 #endif
 #ifdef _WIN32
-#define SEPIA_PACK(declaration) __pragma(pack(push, 1)) declaration __pragma(pack(pop))
+#define SEPIA_PACK(declaration) declaration
 #else
 #define SEPIA_PACK(declaration) declaration __attribute__((__packed__))
 #endif
@@ -1108,9 +1107,19 @@ namespace sepia {
         uint64_t _previous_t;
     };
 
+    class any_write {
+        public:
+        any_write() = default;
+        any_write(const any_write&) = default;
+        any_write(any_write&&) = default;
+        any_write& operator=(const any_write&) = default;
+        any_write& operator=(any_write&&) = default;
+        virtual ~any_write() {}
+    };
+
     /// write converts and writes events to a byte stream.
     template <type event_stream_type>
-    class write {
+    class write : public any_write {
         public:
         template <type generic_type = type::generic>
         write(
@@ -1142,6 +1151,7 @@ namespace sepia {
         any_observable(any_observable&&) = default;
         any_observable& operator=(const any_observable&) = default;
         any_observable& operator=(any_observable&&) = default;
+        virtual ~any_observable() {}
     };
 
     /// observable reads bytes from a stream and dispatches events.
@@ -1211,6 +1221,61 @@ namespace sepia {
     template <type event_stream_type>
     inline std::unique_ptr<observable<event_stream_type>> make_observable(std::unique_ptr<std::istream> event_stream) {
         return sepia::make_unique<observable<event_stream_type>>(std::move(event_stream));
+    }
+
+    /// read_events reads all the events from the given stream.
+    template <type event_stream_type, typename HandleEvent>
+    inline void read_events(std::istream& event_stream, HandleEvent&& handle_event, std::size_t chunk_size = 1 << 16) {
+        const auto header = read_header(event_stream);
+        if (header.event_stream_type != event_stream_type) {
+            throw unsupported_event_type();
+        }
+        auto stream_handle_byte = handle_byte<event_stream_type>(header.width, header.height);
+        std::vector<uint8_t> bytes(chunk_size);
+        event<event_stream_type> stream_event = {};
+        for (;;) {
+            event_stream.read(reinterpret_cast<char*>(bytes.data()), bytes.size());
+            if (event_stream.eof()) {
+                for (auto byte_iterator = bytes.begin();
+                     byte_iterator
+                     != std::next(
+                         bytes.begin(),
+                         static_cast<std::iterator_traits<std::vector<uint8_t>::iterator>::difference_type>(
+                             event_stream.gcount()));
+                     ++byte_iterator) {
+                    if (stream_handle_byte(*byte_iterator, stream_event)) {
+                        handle_event(stream_event);
+                    }
+                }
+                break;
+            } else {
+                for (auto byte : bytes) {
+                    if (stream_handle_byte(byte, stream_event)) {
+                        handle_event(stream_event);
+                    }
+                }
+            }
+        }
+    }
+    template <type event_stream_type, typename HandleEvent>
+    inline void read_events(
+        std::unique_ptr<std::istream> event_stream,
+        HandleEvent&& handle_event,
+        std::size_t chunk_size = 1 << 16) {
+        return read_events<event_stream_type>(*event_stream, std::forward<HandleEvent>(handle_event), chunk_size);
+    }
+
+    /// count_events calculates the number of events in a stream.
+    template <type event_stream_type>
+    inline std::size_t count_events(std::istream& event_stream, std::size_t chunk_size = 1 << 16) {
+        std::size_t count = 0;
+        read_events<event_stream_type>(
+            event_stream, [&count](sepia::event<event_stream_type>) { ++count; }, chunk_size);
+        return count;
+    }
+    template <type event_stream_type>
+    inline std::size_t count_events(std::unique_ptr<std::istream> event_stream, std::size_t chunk_size = 1 << 16) {
+        return count_events<event_stream_type>(*event_stream, chunk_size);
     }
 
     /// indexed_observable reads bytes from a stream and dispatches events.
