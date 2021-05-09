@@ -229,53 +229,18 @@ clang-format -i sepia.hpp python/*.cpp matlab/*.cpp
 
 # Publish
 
-The version number can be changed in *setup.py*.
+1. Bump the version number in *setup.py*.
 
-## Requirements
-
-1. Build the Docker image for Linux builds
-```sh
-docker build manylinux -t manylinux
+2. Clone Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems:
+```
+git clone https://github.com/neuromorphicsystems/cubuzoa.git
+cd cubuzoa
+python3 cubuzoa.py provision
+python3 cubuzoa.py build /path/to/event_stream
 ```
 
-2. Install all the Pythons for macOS
-```sh
-brew install pyenv
-pyenv install 3.7.10
-pyenv install 3.8.8
-pyenv install 3.9.2
-pip install twine
+3. Upload the compiled wheels to Pypi:
 ```
-
-3. Download the base Vagrant box for Windows builds
-
-```sh
-vagrant box add gusztavvargadr/windows-10
-```
-
-## Build and publish
-
-```sh
-rm -rf dist
-eval "$(pyenv init -)"
-pyenv local 3.9.2
-pyenv exec python3 -m pip install --upgrade pip
-pyenv exec python3 -m pip install wheel
-pyenv exec python3 -m pip wheel . -w dist --no-deps
-pyenv local 3.8.8
-pyenv exec python3 -m pip install --upgrade pip
-pyenv exec python3 -m pip install wheel
-pyenv exec python3 -m pip wheel . -w dist --no-deps
-pyenv local 3.7.10
-pyenv exec python3 -m pip install --upgrade pip
-pyenv exec python3 -m pip install wheel
-pyenv exec python3 -m pip wheel . -w dist --no-deps
-docker run --rm -v $(pwd):/io manylinux /opt/python/cp37-cp37m/bin/python3 -m pip wheel . -w dist --no-deps
-docker run --rm -v $(pwd):/io manylinux /opt/python/cp38-cp38/bin/python3 -m pip wheel . -w dist --no-deps
-docker run --rm -v $(pwd):/io manylinux /opt/python/cp39-cp39/bin/python3 -m pip wheel . -w dist --no-deps
-cd windows
-vagrant up
-vagrant destroy -f
-cd ..
-twine upload --skip-existing target/wheels/*
+pip3 install twine
+twine upload wheels/*
 ```

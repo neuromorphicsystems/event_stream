@@ -1,10 +1,9 @@
 import builtins
 import distutils.core
-import os
+import pathlib
 import setuptools
 import shutil
 import sys
-dirname = os.path.dirname(os.path.realpath(__file__))
 
 def build_ext_factory(parameters):
     import setuptools.command.build_ext
@@ -39,10 +38,10 @@ setuptools.setup(
         distutils.core.Extension(
             'event_stream',
             language='c++',
-            sources=[os.path.join(dirname, 'python', 'event_stream.cpp')],
+            sources=[str(pathlib.Path('python') / 'event_stream.cpp')],
             extra_compile_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
             extra_link_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
             include_dirs=[],
-            libraries=[],
+            libraries=[]),
     ],
     cmdclass={'build_ext': build_ext_factory})
