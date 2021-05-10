@@ -231,16 +231,19 @@ clang-format -i sepia.hpp python/*.cpp matlab/*.cpp
 
 1. Bump the version number in *setup.py*.
 
-2. Clone Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems:
+2. Install Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems. Cubuzoa depends on VirtualBox (with its extension pack) and requires about 75 GB of free disk space.
 ```
-git clone https://github.com/neuromorphicsystems/cubuzoa.git
 cd cubuzoa
 python3 cubuzoa.py provision
 python3 cubuzoa.py build /path/to/event_stream
 ```
 
-3. Upload the compiled wheels to Pypi:
+3. Install twine
 ```
 pip3 install twine
-twine upload wheels/*
+```
+
+4. Upload the compiled wheels and the source code to PyPI:
+```
+python3 -m twine upload wheels/*
 ```
