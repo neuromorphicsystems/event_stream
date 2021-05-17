@@ -16,6 +16,7 @@ This repository contains an [Event Stream](http://github.com/neuromorphic-paris/
 The `event_stream` library provides three classes: `Decoder`, `IndexedDecoder` and `Encoder`:
 - `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
 - `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index, and can be used to fetch events at arbitrary timestamps
+- `UdpDecoder` reads event-stream encoded UDP packets (each packet must start with a uint64 little-endian absolute timestamp then contain an ES compliant stream)
 - `Encoder` writes event buffers to a file
 
 Use `Decoder` if you want to process every event without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example if your are writing a file player with a clickable timeline.
@@ -98,6 +99,29 @@ for keyframe_index in range(0, keyframes):
         print('{} / {}, 0 events'.format(keyframe_index + 1, keyframes))
 ```
 
+### UdpDecoder
+
+```python
+import event_stream
+
+# UdpDecoder's only argument is the port to which to bind
+# decoder is an iterator with 3 additional properties: type, width and height
+#     type is one of 'generic', 'dvs', 'atis' and 'color'
+#     if type is 'generic', both width and height are None
+#     otherwise, width and height represent the sensor size in pixels
+# The additional properties are updated everytime a packet is received
+decoder = event_stream.UdpDecoder(12345)
+
+# chunk is a numpy array whose dtype depends on the packet type:
+#     generic: [('t', '<u8'), ('bytes', 'object')]
+#     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('on', '?')]
+#     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('exposure', '?'), ('polarity', '?')]
+#     color: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('r', '?'), ('g', '?'), ('b', '?')]
+
+for chunk in decoder:
+    print('{} events, ts = [{} µs, {} µs]'.format(len(chunk), chunk['t'][0], chunk['t'][-1]))
+```
+
 ### Encoder
 
 ```py
@@ -153,7 +177,7 @@ The two generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` dependin
 
 `event_stream_decode` reads events from a file.
 ```Matlab
-[header, events] = event_stream_decode('/path/to/file.es')
+[header, events] = event_stream_decode('/path/to/file.es');
 ```
 
 ```Matlab
@@ -217,8 +241,26 @@ events = struct(...
     'y', uint16([105; 201; 6]),...
     'on', logical([true; true; false]))
 
-event_stream_encode('/path/to/file.es', header, events)
+event_stream_encode('/path/to/file.es', header, events);
 ```
+
+### event_stream_udp
+
+```Matlab
+udp_receiver = udpport(
+    "datagram",
+    "IPV4",
+    "LocalPort", 12345,
+    "EnablePortSharing", true,
+    "Timeout", 3600
+);
+while true
+    packet = read(udp_receiver, 1, "uint8");
+    [header, events] = event_stream_udp(packet.Data)
+end
+```
+
+`header` and `events` have the same structure as the data returned by [event_stream_decode](#event_stream_decode).
 
 # Contribute
 

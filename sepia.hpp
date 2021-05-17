@@ -1265,6 +1265,20 @@ namespace sepia {
         return read_events<event_stream_type>(*event_stream, std::forward<HandleEvent>(handle_event), chunk_size);
     }
 
+    /// bytes_to_events decodes a byte iterator.
+    template <type event_stream_type, typename ByteIterator>
+    inline std::vector<event<event_stream_type>> bytes_to_events(uint64_t t0, sepia::header header, ByteIterator begin, ByteIterator end) {
+        auto stream_handle_byte = handle_byte<event_stream_type>(header.width, header.height);
+        event<event_stream_type> stream_event = {t0};
+        std::vector<event<event_stream_type>> events;
+        for (; begin != end; ++begin) {
+            if (stream_handle_byte(static_cast<uint8_t>(*begin), stream_event)) {
+                events.push_back(stream_event);
+            }
+        }
+        return events;
+    }
+
     /// count_events calculates the number of events in a stream.
     template <type event_stream_type>
     inline std::size_t count_events(std::istream& event_stream, std::size_t chunk_size = 1 << 16) {

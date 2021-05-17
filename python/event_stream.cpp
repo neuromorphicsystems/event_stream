@@ -1,8 +1,10 @@
 #include <Python.h>
 #include <cstring>
+#include <sstream>
 #include <structmember.h>
 #define NPY_NO_DEPRECATED_API NPY_1_7_API_VERSION
 #include "../sepia.hpp"
+#include "../udp.hpp"
 #include <numpy/arrayobject.h>
 
 /// description represents a named type with an offset.
@@ -220,14 +222,18 @@ PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>& offse
     return events;
 }
 
-/// any_decoder is a common implementation for decoder and indexed_decoder.
+/// any_decoder is a common implementation for decoder, indexed_decoder and udp_decoder.
 struct any_decoder {
     PyObject_HEAD PyObject* type;
     PyObject* width;
     PyObject* height;
     std::unique_ptr<sepia::any_observable> observable;
-    std::vector<uint8_t> offsets;
     sepia::type cpp_type;
+    std::vector<uint8_t> generic_offsets;
+    std::vector<uint8_t> dvs_offsets;
+    std::vector<uint8_t> atis_offsets;
+    std::vector<uint8_t> color_offsets;
+    udp::receiver udp_receiver;
 };
 void any_decoder_dealloc(PyObject* self) {
     auto current = reinterpret_cast<any_decoder*>(self);
@@ -280,7 +286,7 @@ static PyObject* decoder_iternext(PyObject* self) {
                 if (buffer.empty()) {
                     return nullptr;
                 }
-                return events_to_array<sepia::type::generic>(buffer, current->offsets);
+                return events_to_array<sepia::type::generic>(buffer, current->generic_offsets);
             }
             case sepia::type::dvs: {
                 const auto& buffer =
@@ -288,7 +294,7 @@ static PyObject* decoder_iternext(PyObject* self) {
                 if (buffer.empty()) {
                     return nullptr;
                 }
-                return events_to_array<sepia::type::dvs>(buffer, current->offsets);
+                return events_to_array<sepia::type::dvs>(buffer, current->dvs_offsets);
             }
             case sepia::type::atis: {
                 const auto& buffer =
@@ -296,7 +302,7 @@ static PyObject* decoder_iternext(PyObject* self) {
                 if (buffer.empty()) {
                     return nullptr;
                 }
-                return events_to_array<sepia::type::atis>(buffer, current->offsets);
+                return events_to_array<sepia::type::atis>(buffer, current->atis_offsets);
             }
             case sepia::type::color: {
                 const auto& buffer =
@@ -304,7 +310,7 @@ static PyObject* decoder_iternext(PyObject* self) {
                 if (buffer.empty()) {
                     return nullptr;
                 }
-                return events_to_array<sepia::type::color>(buffer, current->offsets);
+                return events_to_array<sepia::type::color>(buffer, current->color_offsets);
             }
         }
     } catch (const std::exception& exception) {
@@ -324,6 +330,10 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
     }
     auto current = reinterpret_cast<any_decoder*>(self);
     try {
+        current->generic_offsets = get_offsets<sepia::type::generic>();
+        current->dvs_offsets = get_offsets<sepia::type::dvs>();
+        current->atis_offsets = get_offsets<sepia::type::atis>();
+        current->color_offsets = get_offsets<sepia::type::color>();
         const auto filename = python_path_to_string(path);
         const auto header = sepia::read_header(sepia::filename_to_ifstream(filename));
         switch (header.event_stream_type) {
@@ -332,7 +342,6 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
                 Py_DECREF(Py_None);
                 current->observable =
                     sepia::make_observable<sepia::type::generic>(sepia::filename_to_ifstream(filename));
-                current->offsets = get_offsets<sepia::type::generic>();
                 break;
             }
             case sepia::type::dvs: {
@@ -343,7 +352,6 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
                 current->height = PyLong_FromLong(header.height);
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_observable<sepia::type::dvs>(sepia::filename_to_ifstream(filename));
-                current->offsets = get_offsets<sepia::type::dvs>();
                 break;
             }
             case sepia::type::atis: {
@@ -354,7 +362,6 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
                 current->height = PyLong_FromLong(header.height);
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_observable<sepia::type::atis>(sepia::filename_to_ifstream(filename));
-                current->offsets = get_offsets<sepia::type::atis>();
                 break;
             }
             case sepia::type::color: {
@@ -365,7 +372,6 @@ static int decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
                 current->height = PyLong_FromLong(header.height);
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_observable<sepia::type::color>(sepia::filename_to_ifstream(filename));
-                current->offsets = get_offsets<sepia::type::color>();
                 break;
             }
             default:
@@ -427,25 +433,25 @@ static PyObject* indexed_decoder_chunk(PyObject* self, PyObject* args) {
                 return events_to_array<sepia::type::generic>(
                     static_cast<sepia::indexed_observable<sepia::type::generic>*>(current->observable.get())
                         ->chunk(keyframe_index),
-                    current->offsets);
+                    current->generic_offsets);
             }
             case sepia::type::dvs: {
                 return events_to_array<sepia::type::dvs>(
                     static_cast<sepia::indexed_observable<sepia::type::dvs>*>(current->observable.get())
                         ->chunk(keyframe_index),
-                    current->offsets);
+                    current->dvs_offsets);
             }
             case sepia::type::atis: {
                 return events_to_array<sepia::type::atis>(
                     static_cast<sepia::indexed_observable<sepia::type::atis>*>(current->observable.get())
                         ->chunk(keyframe_index),
-                    current->offsets);
+                    current->atis_offsets);
             }
             case sepia::type::color: {
                 return events_to_array<sepia::type::color>(
                     static_cast<sepia::indexed_observable<sepia::type::color>*>(current->observable.get())
                         ->chunk(keyframe_index),
-                    current->offsets);
+                    current->color_offsets);
             }
         }
     } catch (const std::exception& exception) {
@@ -468,6 +474,10 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
     }
     auto current = reinterpret_cast<any_decoder*>(self);
     try {
+        current->generic_offsets = get_offsets<sepia::type::generic>();
+        current->dvs_offsets = get_offsets<sepia::type::dvs>();
+        current->atis_offsets = get_offsets<sepia::type::atis>();
+        current->color_offsets = get_offsets<sepia::type::color>();
         const auto filename = python_path_to_string(path);
         const auto header = sepia::read_header(sepia::filename_to_ifstream(filename));
         switch (header.event_stream_type) {
@@ -476,7 +486,6 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_indexed_observable<sepia::type::generic>(
                     sepia::filename_to_ifstream(filename), keyframe_duration);
-                current->offsets = get_offsets<sepia::type::generic>();
                 break;
             }
             case sepia::type::dvs: {
@@ -488,7 +497,6 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_indexed_observable<sepia::type::dvs>(
                     sepia::filename_to_ifstream(filename), keyframe_duration);
-                current->offsets = get_offsets<sepia::type::dvs>();
                 break;
             }
             case sepia::type::atis: {
@@ -500,7 +508,6 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_indexed_observable<sepia::type::atis>(
                     sepia::filename_to_ifstream(filename), keyframe_duration);
-                current->offsets = get_offsets<sepia::type::atis>();
                 break;
             }
             case sepia::type::color: {
@@ -512,7 +519,6 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
                 Py_DECREF(Py_None);
                 current->observable = sepia::make_indexed_observable<sepia::type::color>(
                     sepia::filename_to_ifstream(filename), keyframe_duration);
-                current->offsets = get_offsets<sepia::type::color>();
                 break;
             }
         }
@@ -524,6 +530,101 @@ static int indexed_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) 
     return 0;
 }
 static PyTypeObject indexed_decoder_type = {PyVarObject_HEAD_INIT(nullptr, 0)};
+
+/// udp_decoder reads UDP packets.
+static PyObject* udp_decoder_iter(PyObject* self) {
+    Py_INCREF(self);
+    return self;
+}
+static PyObject* udp_decoder_iternext(PyObject* self) {
+    auto current = reinterpret_cast<any_decoder*>(self);
+    try {
+        const auto& bytes_buffer = current->udp_receiver.next();
+        if (bytes_buffer.size() < 8) {
+            return reinterpret_cast<PyObject*>(allocate_array<sepia::type::generic>(0));
+        }
+        const auto t0 = *reinterpret_cast<const uint64_t*>(bytes_buffer.data());
+        std::stringstream header_stream(std::string(
+            std::next(bytes_buffer.begin(), 8),
+            bytes_buffer.size() < 8 + 20 ? bytes_buffer.end() : std::next(bytes_buffer.begin(), 8 + 20)));
+        const auto header = sepia::read_header(header_stream);
+        switch (header.event_stream_type) {
+            case sepia::type::generic: {
+                Py_DECREF(current->type);
+                current->type = PyUnicode_FromString("generic");
+                Py_DECREF(current->width);
+                Py_INCREF(Py_None);
+                current->width = Py_None;
+                Py_DECREF(current->height);
+                Py_INCREF(Py_None);
+                current->height= Py_None;
+                const auto buffer = sepia::bytes_to_events<sepia::type::generic>(
+                    t0, header, std::next(bytes_buffer.begin(), 8 + 16), bytes_buffer.end());
+                return events_to_array<sepia::type::generic>(buffer, current->generic_offsets);
+            }
+            case sepia::type::dvs: {
+                Py_DECREF(current->type);
+                current->type = PyUnicode_FromString("dvs");
+                Py_DECREF(current->width);
+                current->width = PyLong_FromLong(header.width);
+                Py_DECREF(current->height);
+                current->height = PyLong_FromLong(header.height);
+                const auto buffer = sepia::bytes_to_events<sepia::type::dvs>(
+                    t0, header, std::next(bytes_buffer.begin(), 8 + 20), bytes_buffer.end());
+                return events_to_array<sepia::type::dvs>(buffer, current->dvs_offsets);
+            }
+            case sepia::type::atis: {
+                Py_DECREF(current->type);
+                current->type = PyUnicode_FromString("atis");
+                Py_DECREF(current->width);
+                current->width = PyLong_FromLong(header.width);
+                Py_DECREF(current->height);
+                current->height = PyLong_FromLong(header.height);
+                const auto buffer = sepia::bytes_to_events<sepia::type::atis>(
+                    t0, header, std::next(bytes_buffer.begin(), 8 + 20), bytes_buffer.end());
+                return events_to_array<sepia::type::atis>(buffer, current->atis_offsets);
+            }
+            case sepia::type::color: {
+                 Py_DECREF(current->type);
+                current->type = PyUnicode_FromString("color");
+                Py_DECREF(current->width);
+                current->width = PyLong_FromLong(header.width);
+                Py_DECREF(current->height);
+                current->height = PyLong_FromLong(header.height);
+                const auto buffer = sepia::bytes_to_events<sepia::type::color>(
+                    t0, header, std::next(bytes_buffer.begin(), 8 + 20), bytes_buffer.end());
+                return events_to_array<sepia::type::color>(buffer, current->color_offsets);
+            }
+        }
+    } catch (const std::exception& exception) {
+        PyErr_SetString(PyExc_RuntimeError, exception.what());
+    }
+    return nullptr;
+}
+static PyMethodDef udp_decoder_methods[] = {
+    {"__enter__", any_decoder_enter, METH_NOARGS, nullptr},
+    {"__exit__", any_decoder_exit, METH_VARARGS, nullptr},
+    {nullptr, nullptr, 0, nullptr},
+};
+static int udp_decoder_init(PyObject* self, PyObject* args, PyObject* kwds) {
+    uint16_t port;
+    if (!PyArg_ParseTuple(args, "H", &port)) {
+        return -1;
+    }
+    auto current = reinterpret_cast<any_decoder*>(self);
+    try {
+        current->generic_offsets = get_offsets<sepia::type::generic>();
+        current->dvs_offsets = get_offsets<sepia::type::dvs>();
+        current->atis_offsets = get_offsets<sepia::type::atis>();
+        current->color_offsets = get_offsets<sepia::type::color>();
+        current->udp_receiver = udp::receiver(port);
+    } catch (const std::exception& exception) {
+        PyErr_SetString(PyExc_RuntimeError, exception.what());
+        return -1;
+    }
+    return 0;
+}
+static PyTypeObject udp_decoder_type = {PyVarObject_HEAD_INIT(nullptr, 0)};
 
 /// encoder writes to an Event Stream file.
 struct encoder {
@@ -704,6 +805,18 @@ PyMODINIT_FUNC PyInit_event_stream() {
     indexed_decoder_type.tp_init = indexed_decoder_init;
     PyType_Ready(&indexed_decoder_type);
     PyModule_AddObject(module, "IndexedDecoder", (PyObject*)&indexed_decoder_type);
+    udp_decoder_type.tp_name = "event_stream.UdpDecoder";
+    udp_decoder_type.tp_basicsize = sizeof(any_decoder);
+    udp_decoder_type.tp_dealloc = any_decoder_dealloc;
+    udp_decoder_type.tp_flags = Py_TPFLAGS_DEFAULT | Py_TPFLAGS_BASETYPE;
+    udp_decoder_type.tp_iter = udp_decoder_iter;
+    udp_decoder_type.tp_iternext = udp_decoder_iternext;
+    udp_decoder_type.tp_methods = udp_decoder_methods;
+    udp_decoder_type.tp_members = any_decoder_members;
+    udp_decoder_type.tp_new = any_decoder_new;
+    udp_decoder_type.tp_init = udp_decoder_init;
+    PyType_Ready(&udp_decoder_type);
+    PyModule_AddObject(module, "UdpDecoder", (PyObject*)&udp_decoder_type);
     encoder_type.tp_name = "event_stream.Encoder";
     encoder_type.tp_basicsize = sizeof(encoder);
     encoder_type.tp_dealloc = encoder_dealloc;

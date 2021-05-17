@@ -1,2 +1,2 @@
-include source/sepia.hpp
-include source/event_stream.cpp
+include sepia.hpp
+include python/event_stream.cpp

@@ -18,9 +18,15 @@ def build_ext_factory(parameters):
 with open('README.md') as file:
     long_description = file.read()
 
+extra_args = []
+if sys.platform == 'linux':
+    extra_args += ['-std=c++11']
+elif sys.platform == 'darwin':
+    extra_args += ['-std=c++11','-stdlib=libc++']
+
 setuptools.setup(
     name='event_stream',
-    version='1.3.0',
+    version='1.4.0',
     url='https://github.com/neuromorphicsystems/event_stream',
     author='Alexandre Marcireau',
     author_email='alexandre.marcireau@gmail.com',
@@ -39,8 +45,8 @@ setuptools.setup(
             'event_stream',
             language='c++',
             sources=[str(pathlib.Path('python') / 'event_stream.cpp')],
-            extra_compile_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
-            extra_link_args=(['-std=c++11'] if sys.platform == 'linux' else ['-std=c++11','-stdlib=libc++']),
+            extra_compile_args=extra_args,
+            extra_link_args=extra_args,
             include_dirs=[],
             libraries=[]),
     ],
