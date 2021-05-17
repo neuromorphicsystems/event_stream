@@ -167,8 +167,9 @@ cd /path/to/event_stream
 cd matlab
 mex event_stream_decode.cpp
 mex event_stream_encode.cpp
+mex event_stream_udp.cpp
 ```
-The two generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode` and `event_stream_encode`. You can remove the rest of the repositrory from your machine if you want.
+The generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode`, `event_stream_encode` and `event_stream_udp`. You can remove the rest of the repositrory from your machine if you want.
 
 
 ## Documentation
