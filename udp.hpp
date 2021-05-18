@@ -8,12 +8,12 @@
 #ifndef WIN32_LEAN_AND_MEAN
 #define WIN32_LEAN_AND_MEAN
 #endif
+#include <Mswsock.h>
 #include <WinSock2.h>
 #include <iphlpapi.h>
 #include <stdio.h>
 #include <windows.h>
 #include <ws2tcpip.h>
-#include <Mswsock.h>
 #pragma comment(lib, "ws2_32.lib")
 #else
 #include <arpa/inet.h>
@@ -69,7 +69,7 @@ namespace udp {
     class receiver {
         public:
         receiver() = default;
-        receiver(uint16_t port) {
+        receiver(uint16_t port) : _owner(true) {
 #ifdef _WIN32
             WSADATA wsa_data;
             if (WSAStartup(MAKEWORD(2, 2), &wsa_data) != 0) {
@@ -95,17 +95,6 @@ namespace udp {
             }
 #endif
             {
-                int32_t option = 1;
-                check(
-                    setsockopt(
-                        _socket_file_descriptor,
-                        SOL_SOCKET,
-                        SO_REUSEADDR,
-                        reinterpret_cast<const char*>(&option),
-                        sizeof(option)),
-                    "enabling local address re-use");
-            }
-            {
                 sockaddr_in address;
                 address.sin_family = AF_INET;
                 address.sin_addr.s_addr = INADDR_ANY;
@@ -116,26 +105,43 @@ namespace udp {
             }
             _buffer.resize(1 << 16);
         }
-        receiver(const receiver&) = default;
-        receiver(receiver&& other) = default;
-        receiver& operator=(const receiver&) = default;
-        receiver& operator=(receiver&& other) = default;
-        ~receiver() {
-            close_socket(_socket_file_descriptor);
+        receiver(const receiver&) = delete;
+        receiver(receiver&& other) :
+            _owner(true), _socket_file_descriptor(other._socket_file_descriptor), _buffer(std::move(other._buffer)) {
 #ifdef _WIN32
-            WSACleanup();
+            _wsa_recv_msg = other._wsa_recv_msg;
 #endif
+            other._owner = false;
+        }
+        receiver& operator=(const receiver&) = delete;
+        receiver& operator=(receiver&& other) {
+            if (_owner) {
+                close_socket(_socket_file_descriptor);
+#ifdef _WIN32
+                WSACleanup();
+#endif
+            }
+            _owner = true;
+            _socket_file_descriptor = other._socket_file_descriptor;
+            _buffer = std::move(other._buffer);
+#ifdef _WIN32
+            _wsa_recv_msg = other._wsa_recv_msg;
+#endif
+            other._owner = false;
+            return *this;
+        }
+        ~receiver() {
+            if (_owner) {
+                close_socket(_socket_file_descriptor);
+#ifdef _WIN32
+                WSACleanup();
+#endif
+            }
         }
 
         std::vector<uint8_t>& next() {
             _buffer.resize(1 << 16);
-            fd_set socket_file_descriptor_set;
-            FD_ZERO(&socket_file_descriptor_set);
-            FD_SET(_socket_file_descriptor, &socket_file_descriptor_set);
 #ifdef _WIN32
-            if (select(0, &socket_file_descriptor_set, nullptr, nullptr, nullptr) < 0) {
-                throw std::runtime_error("select failed");
-            }
             WSAMSG message = {};
             WSABUF location;
             location.buf = reinterpret_cast<CHAR*>(_buffer.data());
@@ -147,9 +153,6 @@ namespace udp {
                 throw std::runtime_error("socket error");
             }
 #else
-            if (select(_socket_file_descriptor + 1, &socket_file_descriptor_set, nullptr, nullptr, nullptr) < 0) {
-                throw std::runtime_error("select failed");
-            }
             msghdr message = {};
             iovec location;
             location.iov_base = _buffer.data();
@@ -166,6 +169,7 @@ namespace udp {
         }
 
         protected:
+        bool _owner;
         socket_file_descriptor_t _socket_file_descriptor;
         std::vector<uint8_t> _buffer;
 #ifdef _WIN32
@@ -175,7 +179,7 @@ namespace udp {
 
     class transmitter {
         public:
-        transmitter() {
+        transmitter() : _owner(true) {
             _socket_file_descriptor = check_socket(socket(AF_INET, SOCK_DGRAM, 0));
             int32_t option = 1;
             check(
@@ -187,10 +191,23 @@ namespace udp {
                     sizeof(option)),
                 "enabling local address re-use");
         }
-        transmitter(const transmitter&) = default;
-        transmitter(transmitter&& other) = default;
-        transmitter& operator=(const transmitter&) = default;
-        transmitter& operator=(transmitter&& other) = default;
+        transmitter(const transmitter&) = delete;
+        transmitter(transmitter&& other) : _owner(true), _socket_file_descriptor(other._socket_file_descriptor) {
+            other._owner = false;
+        }
+        transmitter& operator=(const transmitter&) = delete;
+        transmitter& operator=(transmitter&& other) {
+            if (_owner) {
+                close_socket(_socket_file_descriptor);
+#ifdef _WIN32
+                WSACleanup();
+#endif
+            }
+            _owner = true;
+            _socket_file_descriptor = other._socket_file_descriptor;
+            other._owner = false;
+            return *this;
+        }
         virtual ~transmitter() {
             close_socket(_socket_file_descriptor);
 #ifdef _WIN32
@@ -220,6 +237,7 @@ namespace udp {
         }
 
         protected:
+        bool _owner;
         socket_file_descriptor_t _socket_file_descriptor;
     };
 }
