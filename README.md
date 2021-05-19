@@ -288,5 +288,6 @@ pip3 install twine
 
 4. Upload the compiled wheels and the source code to PyPI:
 ```
+python3 setup.py sdist --dist-dir wheels
 python3 -m twine upload wheels/*
 ```
