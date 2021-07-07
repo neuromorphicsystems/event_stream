@@ -26,11 +26,11 @@ elif sys.platform == 'darwin':
 
 setuptools.setup(
     name='event_stream',
-    version='1.4.1',
+    version='1.4.2',
     url='https://github.com/neuromorphicsystems/event_stream',
     author='Alexandre Marcireau',
     author_email='alexandre.marcireau@gmail.com',
-    description='read event stream files',
+    description='Read and write Event Stream (.es) files',
     long_description=long_description,
     long_description_content_type='text/markdown',
     setup_requires=['numpy'],

@@ -36,7 +36,7 @@ std::vector<description> get_descriptions<sepia::type::color>() {
 
 /// offsets calculates the packed offsets from the description types.
 template <sepia::type event_stream_type>
-std::vector<uint8_t> get_offsets() {
+static std::vector<uint8_t> get_offsets() {
     auto descriptions = get_descriptions<event_stream_type>();
     std::vector<uint8_t> offsets(descriptions.size(), 0);
     for (std::size_t index = 1; index < descriptions.size(); ++index) {
@@ -60,7 +60,7 @@ std::vector<uint8_t> get_offsets() {
 
 /// event_type_to_dtype returns a PyArray_Descr object.
 template <sepia::type event_stream_type>
-PyArray_Descr* event_type_to_dtype() {
+static PyArray_Descr* event_type_to_dtype() {
     const auto descriptions = get_descriptions<event_stream_type>();
     auto python_names_and_types = PyList_New(static_cast<Py_ssize_t>(descriptions.size()));
     for (Py_ssize_t index = 0; index < static_cast<Py_ssize_t>(descriptions.size()); ++index) {
@@ -84,7 +84,7 @@ PyArray_Descr* event_type_to_dtype() {
 
 /// allocate_array returns a structured array with the required length to accomodate the given stream.
 template <sepia::type event_stream_type>
-PyArrayObject* allocate_array(npy_intp size) {
+static PyArrayObject* allocate_array(npy_intp size) {
     return reinterpret_cast<PyArrayObject*>(PyArray_NewFromDescr(
         &PyArray_Type, event_type_to_dtype<event_stream_type>(), 1, &size, nullptr, nullptr, 0, nullptr));
 }
@@ -92,9 +92,9 @@ PyArrayObject* allocate_array(npy_intp size) {
 /// events_to_array converts a buffer of events to a numpy array.
 template <sepia::type event_stream_type>
 PyObject*
-events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
+static events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
 template <>
-PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
+static PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::generic>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto generic_event = buffer[index];
@@ -106,7 +106,7 @@ PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, const std::vector<uint8_t>& offsets) {
+static PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::dvs>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto dvs_event = buffer[index];
@@ -119,7 +119,7 @@ PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, const std
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, const std::vector<uint8_t>& offsets) {
+static PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::atis>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto atis_event = buffer[index];
@@ -133,7 +133,7 @@ PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, const st
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-PyObject* events_to_array(const std::vector<sepia::color_event>& buffer, const std::vector<uint8_t>& offsets) {
+static PyObject* events_to_array(const std::vector<sepia::color_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::color>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto color_event = buffer[index];
@@ -149,7 +149,7 @@ PyObject* events_to_array(const std::vector<sepia::color_event>& buffer, const s
 }
 
 /// python_path_to_string converts a path-like object to a string.
-std::string python_path_to_string(PyObject* path) {
+static std::string python_path_to_string(PyObject* path) {
     if (PyUnicode_Check(path)) {
         return reinterpret_cast<const char*>(PyUnicode_DATA(path));
     }
@@ -177,7 +177,7 @@ std::string python_path_to_string(PyObject* path) {
 }
 
 // int32_to_uint16 converts with checks an integer to a unsigned short.
-uint16_t int32_to_uint16(int32_t value) {
+static uint16_t int32_to_uint16(int32_t value) {
     if (value < 0 || value >= (1 << 16)) {
         throw std::runtime_error("width and height must be in the range [0, 65535]");
     }
@@ -186,7 +186,7 @@ uint16_t int32_to_uint16(int32_t value) {
 
 // chunk_to_array extracts a Numpy array from a generic object.
 template <sepia::type event_stream_type>
-PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>& offsets) {
+static PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>& offsets) {
     if (!PyArray_Check(chunk)) {
         throw std::runtime_error("chunk must be a numpy array");
     }
@@ -235,7 +235,7 @@ struct any_decoder {
     std::vector<uint8_t> color_offsets;
     udp::receiver udp_receiver;
 };
-void any_decoder_dealloc(PyObject* self) {
+static void any_decoder_dealloc(PyObject* self) {
     auto current = reinterpret_cast<any_decoder*>(self);
     Py_DECREF(current->type);
     Py_DECREF(current->width);

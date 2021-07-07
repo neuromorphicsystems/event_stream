@@ -927,7 +927,9 @@ namespace sepia {
         /// operator() handles an event.
         void operator()(generic_event current_generic_event) {
             if (current_generic_event.t < _previous_t) {
-                throw std::logic_error("the event's timestamp is smaller than the previous one's");
+                throw std::logic_error(
+                    "non-monotic timestamps (" + std::to_string(_previous_t) + " followed by "
+                    + std::to_string(current_generic_event.t) + ")");
             }
             auto relative_t = current_generic_event.t - _previous_t;
             if (relative_t >= 0b11111110) {
@@ -972,7 +974,9 @@ namespace sepia {
                 throw coordinates_overflow();
             }
             if (current_dvs_event.t < _previous_t) {
-                throw std::logic_error("the event's timestamp is smaller than the previous one's");
+                throw std::logic_error(
+                    "non-monotic timestamps (" + std::to_string(_previous_t) + " followed by "
+                    + std::to_string(current_dvs_event.t) + ")");
             }
             auto relative_t = current_dvs_event.t - _previous_t;
             if (relative_t >= 0b1111111) {
@@ -1021,7 +1025,9 @@ namespace sepia {
                 throw coordinates_overflow();
             }
             if (current_atis_event.t < _previous_t) {
-                throw std::logic_error("the event's timestamp is smaller than the previous one's");
+                throw std::logic_error(
+                    "non-monotic timestamps (" + std::to_string(_previous_t) + " followed by "
+                    + std::to_string(current_atis_event.t) + ")");
             }
             auto relative_t = current_atis_event.t - _previous_t;
             if (relative_t >= 0b111111) {
@@ -1076,7 +1082,9 @@ namespace sepia {
                 throw coordinates_overflow();
             }
             if (current_color_event.t < _previous_t) {
-                throw std::logic_error("the event's timestamp is smaller than the previous one's");
+                throw std::logic_error(
+                    "non-monotic timestamps (" + std::to_string(_previous_t) + " followed by "
+                    + std::to_string(current_color_event.t) + ")");
             }
             auto relative_t = current_color_event.t - _previous_t;
             if (relative_t >= 0b11111110) {
@@ -1267,7 +1275,8 @@ namespace sepia {
 
     /// bytes_to_events decodes a byte iterator.
     template <type event_stream_type, typename ByteIterator>
-    inline std::vector<event<event_stream_type>> bytes_to_events(uint64_t t0, sepia::header header, ByteIterator begin, ByteIterator end) {
+    inline std::vector<event<event_stream_type>>
+    bytes_to_events(uint64_t t0, sepia::header header, ByteIterator begin, ByteIterator end) {
         auto stream_handle_byte = handle_byte<event_stream_type>(header.width, header.height);
         event<event_stream_type> stream_event = {t0};
         std::vector<event<event_stream_type>> events;

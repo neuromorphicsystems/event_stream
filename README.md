@@ -5,13 +5,13 @@ This repository contains an [Event Stream](http://github.com/neuromorphic-paris/
 1. [Python](#Python)
 2. [Matlab](#Matlab)
 
-# Python
+## Python
 
-## Setup
+```
+pip3 install event_stream
+```
 
-`pip install event_stream`
-
-## Documentation
+### Documentation
 
 The `event_stream` library provides three classes: `Decoder`, `IndexedDecoder` and `Encoder`:
 - `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
@@ -27,7 +27,7 @@ All three classes are contexts managers compatible with the `with` operator.
 
 The detailed documentation for each class consists in a commented example (see below). There are more examples in the *examples* directory. Run *examples/download.py* first to download the media files used by the example scripts (12.8 MB).
 
-### Decoder
+#### Decoder
 
 ```python
 import event_stream
@@ -53,7 +53,7 @@ for chunk in decoder:
     print('{} events, ts = [{} µs, {} µs]'.format(len(chunk), chunk['t'][0], chunk['t'][-1]))
 ```
 
-### IndexedDecoder
+#### IndexedDecoder
 
 ```python
 import event_stream
@@ -99,7 +99,7 @@ for keyframe_index in range(0, keyframes):
         print('{} / {}, 0 events'.format(keyframe_index + 1, keyframes))
 ```
 
-### UdpDecoder
+#### UdpDecoder
 
 ```python
 import event_stream
@@ -122,7 +122,7 @@ for chunk in decoder:
     print('{} events, ts = [{} µs, {} µs]'.format(len(chunk), chunk['t'][0], chunk['t'][-1]))
 ```
 
-### Encoder
+#### Encoder
 
 ```py
 # Encoder's first argument is an Event Stream file path
@@ -157,9 +157,9 @@ second_chunk = numpy.array([
 encoder.write(second_chunk)
 ```
 
-# Matlab
+## Matlab
 
-## Setup
+### Setup
 
 After downloading this repository ([zip file](https://github.com/neuromorphicsystems/event_stream/archive/refs/heads/main.zip)), run the following commands in Matlab:
 ```js
@@ -172,9 +172,9 @@ mex event_stream_udp.cpp
 The generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode`, `event_stream_encode` and `event_stream_udp`. You can remove the rest of the repositrory from your machine if you want.
 
 
-## Documentation
+### Documentation
 
-### event_stream_decode
+#### event_stream_decode
 
 `event_stream_decode` reads events from a file.
 ```Matlab
@@ -227,7 +227,7 @@ events =
   - `b: [nx1 uint8]`
 
 
-### event_stream_encode
+#### event_stream_encode
 
 `event_stream_encode` writes events to a file. The fields names and types must match those returned by `event_stream_decode`.
 ```Matlab
@@ -245,7 +245,7 @@ events = struct(...
 event_stream_encode('/path/to/file.es', header, events);
 ```
 
-### event_stream_udp
+#### event_stream_udp
 
 ```Matlab
 udp_receiver = udpport(
@@ -263,14 +263,14 @@ end
 
 `header` and `events` have the same structure as the data returned by [event_stream_decode](#event_stream_decode).
 
-# Contribute
+## Contribute
 
 To format the code, run:
 ```sh
 clang-format -i sepia.hpp python/*.cpp matlab/*.cpp
 ```
 
-# Publish
+## Publish
 
 1. Bump the version number in *setup.py*.
 
