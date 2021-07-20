@@ -91,8 +91,7 @@ static PyArrayObject* allocate_array(npy_intp size) {
 
 /// events_to_array converts a buffer of events to a numpy array.
 template <sepia::type event_stream_type>
-PyObject*
-static events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
+static PyObject* events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
 template <>
 static PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::generic>(buffer.size());
