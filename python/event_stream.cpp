@@ -93,7 +93,7 @@ static PyArrayObject* allocate_array(npy_intp size) {
 template <sepia::type event_stream_type>
 static PyObject* events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
 template <>
-static PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
+PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::generic>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto generic_event = buffer[index];
@@ -105,7 +105,7 @@ static PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-static PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, const std::vector<uint8_t>& offsets) {
+PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::dvs>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto dvs_event = buffer[index];
@@ -118,7 +118,7 @@ static PyObject* events_to_array(const std::vector<sepia::dvs_event>& buffer, co
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-static PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, const std::vector<uint8_t>& offsets) {
+PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::atis>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto atis_event = buffer[index];
@@ -132,7 +132,7 @@ static PyObject* events_to_array(const std::vector<sepia::atis_event>& buffer, c
     return reinterpret_cast<PyObject*>(events);
 }
 template <>
-static PyObject* events_to_array(const std::vector<sepia::color_event>& buffer, const std::vector<uint8_t>& offsets) {
+PyObject* events_to_array(const std::vector<sepia::color_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::color>(buffer.size());
     for (npy_intp index = 0; index < static_cast<npy_intp>(buffer.size()); ++index) {
         const auto color_event = buffer[index];

@@ -274,11 +274,11 @@ clang-format -i sepia.hpp python/*.cpp matlab/*.cpp
 
 1. Bump the version number in *setup.py*.
 
-2. Install Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems. Cubuzoa depends on VirtualBox (with its extension pack) and requires about 75 GB of free disk space.
+2. Install Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems. Cubuzoa depends on VirtualBox (with its extension pack) and requires about 100 GB of free disk space.
 ```
 cd cubuzoa
-python3 cubuzoa.py provision
-python3 cubuzoa.py build /path/to/event_stream
+python3 -m cubuzoa provision
+python3 -m cubuzoa build /path/to/event_stream
 ```
 
 3. Install twine
