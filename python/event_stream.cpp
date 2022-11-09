@@ -52,7 +52,8 @@ static std::vector<uint8_t> get_offsets() {
                 offsets[index] = offsets[index - 1] + 8;
                 break;
             default:
-                throw std::runtime_error("unknown type for offset calculation");
+                throw std::logic_error(
+                    std::string("unmapped type \"") + std::to_string(descriptions[index - 1].type) + "\"");
         }
     }
     return offsets;
@@ -91,7 +92,8 @@ static PyArrayObject* allocate_array(npy_intp size) {
 
 /// events_to_array converts a buffer of events to a numpy array.
 template <sepia::type event_stream_type>
-static PyObject* events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
+static PyObject*
+events_to_array(const std::vector<sepia::event<event_stream_type>>& buffer, const std::vector<uint8_t>& offsets);
 template <>
 PyObject* events_to_array(const std::vector<sepia::generic_event>& buffer, const std::vector<uint8_t>& offsets) {
     auto events = allocate_array<sepia::type::generic>(buffer.size());
@@ -202,18 +204,26 @@ static PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>
         auto field = PyMapping_GetItemString(fields, descriptions[index].name.c_str());
         if (!field) {
             throw std::runtime_error(
-                std::string("chunk must be a structured array with a '") + descriptions[index].name + "' field");
+                std::string("chunk must be a structured array with a \"") + descriptions[index].name + "\" field");
         }
-        if (reinterpret_cast<PyArray_Descr*>(PyTuple_GetItem(field, 0))->type_num != descriptions[index].type) {
+        auto description = reinterpret_cast<PyArray_Descr*>(PyTuple_GetItem(field, 0));
+        PyArray_Descr* reference_description = PyArray_DescrFromType(descriptions[index].type);
+        reference_description->byteorder = '<';
+        if (!PyArray_EquivTypes(description, reference_description)
+            || !PyArray_EquivByteorders(description->byteorder, reference_description->byteorder)) {
             Py_DECREF(field);
-            throw std::runtime_error(
-                std::string("the field '") + descriptions[index].name + " must have the type "
-                + std::to_string(descriptions[index].type));
+            auto message = std::string("the field \"") + descriptions[index].name + "\" must have the type "
+                           + std::string(1, reference_description->byteorder)
+                           + std::string(1, reference_description->type) + std::to_string(reference_description->elsize)
+                           + ", got \"" + std::string(1, description->byteorder) + std::string(1, description->type)
+                           + std::to_string(description->elsize) + "\"";
+            Py_DECREF(reference_description);
+            throw std::runtime_error(message);
         }
         if (PyLong_AsLong(PyTuple_GetItem(field, 1)) != offsets[index]) {
             Py_DECREF(field);
             throw std::runtime_error(
-                std::string("the field '") + descriptions[index].name + "' must have the offset "
+                std::string("the field \"") + descriptions[index].name + "\" must have the offset "
                 + std::to_string(offsets[index]));
         }
         Py_DECREF(field);
@@ -556,7 +566,7 @@ static PyObject* udp_decoder_iternext(PyObject* self) {
                 current->width = Py_None;
                 Py_DECREF(current->height);
                 Py_INCREF(Py_None);
-                current->height= Py_None;
+                current->height = Py_None;
                 const auto buffer = sepia::bytes_to_events<sepia::type::generic>(
                     t0, header, std::next(bytes_buffer.begin(), 8 + 16), bytes_buffer.end());
                 return events_to_array<sepia::type::generic>(buffer, current->generic_offsets);
@@ -584,7 +594,7 @@ static PyObject* udp_decoder_iternext(PyObject* self) {
                 return events_to_array<sepia::type::atis>(buffer, current->atis_offsets);
             }
             case sepia::type::color: {
-                 Py_DECREF(current->type);
+                Py_DECREF(current->type);
                 current->type = PyUnicode_FromString("color");
                 Py_DECREF(current->width);
                 current->width = PyLong_FromLong(header.width);

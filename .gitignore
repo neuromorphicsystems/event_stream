@@ -1,7 +1,7 @@
 event_stream
 build
 dist
-wheels
+wheelhouse
 .eggs
 *__pycache__
 *.egg-info
