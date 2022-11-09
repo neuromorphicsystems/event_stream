@@ -1,10 +1,11 @@
 import builtins
-import distutils.core
 import pathlib
 import setuptools
 import setuptools.extension
 import setuptools.command.build_ext
 import sys
+
+dirname = pathlib.Path(__file__).resolve().parent
 
 
 class build_ext(setuptools.command.build_ext.build_ext):
@@ -34,7 +35,6 @@ setuptools.setup(
     description="Read and write Event Stream (.es) files",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    setup_requires=["numpy"],
     install_requires=["numpy"],
     classifiers=[
         "Programming Language :: Python :: 3",
@@ -45,7 +45,7 @@ setuptools.setup(
         setuptools.extension.Extension(
             "event_stream",
             language="c++",
-            sources=[str(pathlib.Path("python") / "event_stream.cpp")],
+            sources=[str(dirname / "python" / "event_stream.cpp")],
             extra_compile_args=extra_args,
             extra_link_args=extra_args,
             include_dirs=[],
