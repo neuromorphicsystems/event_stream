@@ -14,10 +14,11 @@ pip3 install event_stream
 ### Documentation
 
 The `event_stream` library provides three classes: `Decoder`, `IndexedDecoder` and `Encoder`:
-- `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
-- `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index, and can be used to fetch events at arbitrary timestamps
-- `UdpDecoder` reads event-stream encoded UDP packets (each packet must start with a uint64 little-endian absolute timestamp then contain an ES compliant stream)
-- `Encoder` writes event buffers to a file
+
+-   `Decoder` reads constant-size byte buffers from an Event Stream file and returns variable-size event buffers
+-   `IndexedDecoder` reads the entire file when created (without storing events in memory) to build an index, and can be used to fetch events at arbitrary timestamps
+-   `UdpDecoder` reads event-stream encoded UDP packets (each packet must start with a uint64 little-endian absolute timestamp then contain an ES compliant stream)
+-   `Encoder` writes event buffers to a file
 
 Use `Decoder` if you want to process every event without delay. Use `IndexedDecoder` if you need to move back and forth while reading the file, for example if your are writing a file player with a clickable timeline.
 
@@ -25,7 +26,7 @@ The first argument to `Decoder`, `IndexedDecoder` and `Encoder` is a file name. 
 
 All three classes are contexts managers compatible with the `with` operator.
 
-The detailed documentation for each class consists in a commented example (see below). There are more examples in the *examples* directory. Run *examples/download.py* first to download the media files used by the example scripts (12.8 MB).
+The detailed documentation for each class consists in a commented example (see below). There are more examples in the _examples_ directory. Run _examples/download.py_ first to download the media files used by the example scripts (12.8 MB).
 
 #### Decoder
 
@@ -162,6 +163,7 @@ encoder.write(second_chunk)
 ### Setup
 
 After downloading this repository ([zip file](https://github.com/neuromorphicsystems/event_stream/archive/refs/heads/main.zip)), run the following commands in Matlab:
+
 ```js
 cd /path/to/event_stream
 cd matlab
@@ -169,14 +171,15 @@ mex event_stream_decode.cpp
 mex event_stream_encode.cpp
 mex event_stream_udp.cpp
 ```
-The generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode`, `event_stream_encode` and `event_stream_udp`. You can remove the rest of the repositrory from your machine if you want.
 
+The generated files (extension `.mexa64`, `.mexmaci64` or `.mexw64` depending on your operating system) can be placed in any directory. They contain the functions `event_stream_decode`, `event_stream_encode` and `event_stream_udp`. You can remove the rest of the repositrory from your machine if you want.
 
 ### Documentation
 
 #### event_stream_decode
 
 `event_stream_decode` reads events from a file.
+
 ```Matlab
 [header, events] = event_stream_decode('/path/to/file.es');
 ```
@@ -204,32 +207,32 @@ events =
 
 `events` is a struct whose fields are numerical arrays of equal length. Each array encodes one property of the events in the file (for example the timestamp `t`). The number of fields and their names depend on `header.type`:
 
-- `'generic'`:
-  - `t: [n×1 uint64]`
-  - `bytes: [n×1 string]`
-- `'dvs'`:
-  - `t: [n×1 uint64]`
-  - `x: [nx1 uint16]`
-  - `y: [nx1 uint16]`
-  - `on: [nx1 logical]`
-- `'atis'`:
-  - `t: [n×1 uint64]`
-  - `x: [nx1 uint16]`
-  - `y: [nx1 uint16]`
-  - `exposure: [nx1 logical]`
-  - `polarity: [nx1 logical]`
-- `'color'`:
-  - `t: [n×1 uint64]`
-  - `x: [nx1 uint16]`
-  - `y: [nx1 uint16]`
-  - `r: [nx1 uint8]`
-  - `g: [nx1 uint8]`
-  - `b: [nx1 uint8]`
-
+-   `'generic'`:
+    -   `t: [n×1 uint64]`
+    -   `bytes: [n×1 string]`
+-   `'dvs'`:
+    -   `t: [n×1 uint64]`
+    -   `x: [nx1 uint16]`
+    -   `y: [nx1 uint16]`
+    -   `on: [nx1 logical]`
+-   `'atis'`:
+    -   `t: [n×1 uint64]`
+    -   `x: [nx1 uint16]`
+    -   `y: [nx1 uint16]`
+    -   `exposure: [nx1 logical]`
+    -   `polarity: [nx1 logical]`
+-   `'color'`:
+    -   `t: [n×1 uint64]`
+    -   `x: [nx1 uint16]`
+    -   `y: [nx1 uint16]`
+    -   `r: [nx1 uint8]`
+    -   `g: [nx1 uint8]`
+    -   `b: [nx1 uint8]`
 
 #### event_stream_encode
 
 `event_stream_encode` writes events to a file. The fields names and types must match those returned by `event_stream_decode`.
+
 ```Matlab
 header = struct(...
     'type', 'dvs',...
@@ -266,28 +269,13 @@ end
 ## Contribute
 
 To format the code, run:
+
 ```sh
 clang-format -i sepia.hpp python/*.cpp matlab/*.cpp
 ```
 
 ## Publish
 
-1. Bump the version number in *setup.py*.
+1. Bump the version number in _setup.py_.
 
-2. Install Cubuzoa in a different directory (https://github.com/neuromorphicsystems/cubuzoa) to build pre-compiled versions for all major operating systems. Cubuzoa depends on VirtualBox (with its extension pack) and requires about 100 GB of free disk space.
-```
-cd cubuzoa
-python3 -m cubuzoa provision
-python3 -m cubuzoa build /path/to/event_stream
-```
-
-3. Install twine
-```
-pip3 install twine
-```
-
-4. Upload the compiled wheels and the source code to PyPI:
-```
-python3 setup.py sdist --dist-dir wheels
-python3 -m twine upload wheels/*
-```
+2. Create a new release on GitHub.
