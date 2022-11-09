@@ -21,9 +21,9 @@ with open("README.md") as file:
 
 extra_args = []
 if sys.platform == "linux":
-    extra_args += ["-std=c++11"]
+    extra_args += ["-std=c++17"]
 elif sys.platform == "darwin":
-    extra_args += ["-std=c++11", "-stdlib=libc++"]
+    extra_args += ["-std=c++17", "-stdlib=libc++"]
 
 setuptools.setup(
     name="event_stream",
