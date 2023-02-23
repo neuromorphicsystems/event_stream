@@ -17,7 +17,7 @@ class build_ext(setuptools.command.build_ext.build_ext):
         self.include_dirs.append(numpy.get_include())
 
 
-with open("README.md") as file:
+with open(dirname / "README.md") as file:
     long_description = file.read()
 
 extra_args = []
