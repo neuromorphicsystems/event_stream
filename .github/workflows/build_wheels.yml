@@ -9,7 +9,7 @@ on:
 
 env:
     CIBW_ARCHS_MACOS: x86_64 arm64
-    CIBW_SKIP: pp*
+    CIBW_SKIP: cp36-* cp37-* pp* *i686
 
 jobs:
     build_wheels:
