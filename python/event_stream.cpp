@@ -6,7 +6,7 @@
 #include "../sepia.hpp"
 #include "../udp.hpp"
 #include <numpy/arrayobject.h>
-#include <numpy/npy_2_compat.h>
+#include "npy_2_compat.h"
 #include <optional>
 
 /// description represents a named type with an offset.
