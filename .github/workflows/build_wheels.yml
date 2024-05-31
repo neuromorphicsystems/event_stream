@@ -9,7 +9,6 @@ on:
 
 env:
   CIBW_ARCHS_MACOS: x86_64 arm64
-  CIBW_ARCHS_LINUX: x86_64 aarch64
   CIBW_SKIP: cp36-* cp37-* pp* *i686
 
 jobs:
