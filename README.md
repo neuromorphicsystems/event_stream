@@ -46,8 +46,8 @@ else:
 
 # chunk is a numpy array whose dtype depends on the decoder type:
 #     generic: [('t', '<u8'), ('bytes', 'object')]
-#     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('on', '?')]
-#     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('exposure', '?'), ('polarity', '?')]
+#     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), (('on', 'p'), '?')]
+#     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), (('exposure', 'e'), '?'), (('polarity', 'p'), '?')]
 #     color: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('r', '?'), ('g', '?'), ('b', '?')]
 # chunk always contains at least one event
 for chunk in decoder:

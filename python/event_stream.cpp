@@ -7,10 +7,12 @@
 #include "../udp.hpp"
 #include <numpy/arrayobject.h>
 #include <numpy/npy_2_compat.h>
+#include <optional>
 
 /// description represents a named type with an offset.
 struct description {
     std::string name;
+    std::optional<std::string> title;
     NPY_TYPES type;
 };
 
@@ -19,20 +21,30 @@ template <sepia::type event_stream_type>
 std::vector<description> get_descriptions();
 template <>
 std::vector<description> get_descriptions<sepia::type::generic>() {
-    return {{"t", NPY_UINT64}, {"bytes", NPY_OBJECT}};
+    return {{"t", {}, NPY_UINT64}, {"bytes", {}, NPY_OBJECT}};
 }
 template <>
 std::vector<description> get_descriptions<sepia::type::dvs>() {
-    return {{"t", NPY_UINT64}, {"x", NPY_UINT16}, {"y", NPY_UINT16}, {"on", NPY_BOOL}};
+    return {{"t", {}, NPY_UINT64}, {"x", {}, NPY_UINT16}, {"y", {}, NPY_UINT16}, {"on", "p", NPY_BOOL}};
 }
 template <>
 std::vector<description> get_descriptions<sepia::type::atis>() {
-    return {{"t", NPY_UINT64}, {"x", NPY_UINT16}, {"y", NPY_UINT16}, {"exposure", NPY_BOOL}, {"polarity", NPY_BOOL}};
+    return {
+        {"t", {}, NPY_UINT64},
+        {"x", {}, NPY_UINT16},
+        {"y", {}, NPY_UINT16},
+        {"exposure", "e", NPY_BOOL},
+        {"polarity", "p", NPY_BOOL}};
 }
 template <>
 std::vector<description> get_descriptions<sepia::type::color>() {
     return {
-        {"t", NPY_UINT64}, {"x", NPY_UINT16}, {"y", NPY_UINT16}, {"r", NPY_UINT8}, {"g", NPY_UINT8}, {"b", NPY_UINT8}};
+        {"t", {}, NPY_UINT64},
+        {"x", {}, NPY_UINT16},
+        {"y", {}, NPY_UINT16},
+        {"r", {}, NPY_UINT8},
+        {"g", {}, NPY_UINT8},
+        {"b", {}, NPY_UINT8}};
 }
 
 /// offsets calculates the packed offsets from the description types.
@@ -66,12 +78,22 @@ static PyArray_Descr* event_type_to_dtype() {
     const auto descriptions = get_descriptions<event_stream_type>();
     auto python_names_and_types = PyList_New(static_cast<Py_ssize_t>(descriptions.size()));
     for (Py_ssize_t index = 0; index < static_cast<Py_ssize_t>(descriptions.size()); ++index) {
+
+        const auto name = PyUnicode_FromString(descriptions[index].name.c_str());
+        auto name_and_title = name;
+        if (descriptions[index].title) {
+            name_and_title = PyTuple_Pack(
+                2,
+                name,
+                PyUnicode_FromString(descriptions[index].title.value().c_str())
+            );
+        }
         if (PyList_SetItem(
                 python_names_and_types,
                 index,
                 PyTuple_Pack(
                     2,
-                    PyUnicode_FromString(descriptions[index].name.c_str()),
+                    name_and_title,
                     PyArray_TypeObjectFromType(descriptions[index].type)))
             < 0) {
             throw std::logic_error("PyList_SetItem failed");
