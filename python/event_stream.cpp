@@ -6,6 +6,7 @@
 #include "../sepia.hpp"
 #include "../udp.hpp"
 #include <numpy/arrayobject.h>
+#include <numpy/npy_2_compat.h>
 
 /// description represents a named type with an offset.
 struct description {
@@ -196,7 +197,7 @@ static PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>
         throw std::runtime_error("chunk's dimension must be 1");
     }
     const auto descriptions = get_descriptions<event_stream_type>();
-    auto fields = PyArray_DESCR(events)->fields;
+    auto fields = PyDataType_FIELDS(PyArray_DESCR(events));
     if (!PyMapping_Check(fields)) {
         throw std::runtime_error("chunk must be a structured array");
     }
@@ -214,9 +215,10 @@ static PyArrayObject* chunk_to_array(PyObject* chunk, const std::vector<uint8_t>
             Py_DECREF(field);
             auto message = std::string("the field \"") + descriptions[index].name + "\" must have the type "
                            + std::string(1, reference_description->byteorder)
-                           + std::string(1, reference_description->type) + std::to_string(reference_description->elsize)
-                           + ", got \"" + std::string(1, description->byteorder) + std::string(1, description->type)
-                           + std::to_string(description->elsize) + "\"";
+                           + std::string(1, reference_description->type)
+                           + std::to_string(PyDataType_ELSIZE(reference_description)) + ", got \""
+                           + std::string(1, description->byteorder) + std::string(1, description->type)
+                           + std::to_string(PyDataType_ELSIZE(description)) + "\"";
             Py_DECREF(reference_description);
             throw std::runtime_error(message);
         }
