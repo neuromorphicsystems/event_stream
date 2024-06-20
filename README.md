@@ -84,8 +84,8 @@ for keyframe_index in range(0, keyframes):
     #     where T is the second argument passed to IndexedDecoder
     # chunk is a numpy array whose dtype depends on the decoder type:
     #     generic: [('t', '<u8'), ('bytes', 'object')]
-    #     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('on', '?')]
-    #     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('exposure', '?'), ('polarity', '?')]
+    #     dvs: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), (('on', 'p'), '?')]
+    #     atis: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), (('exposure', 'e'), '?'), (('polarity', 'p'), '?')]
     #     color: [('t', '<u8'), ('x', '<u2'), ('y', '<u2'), ('r', '?'), ('g', '?'), ('b', '?')]
     # chunk may be empty
     chunk = decoder.chunk(keyframe_index)
