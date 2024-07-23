@@ -28,7 +28,7 @@ elif sys.platform == "darwin":
 
 setuptools.setup(
     name="event_stream",
-    version="1.6.2",
+    version="1.6.3",
     url="https://github.com/neuromorphicsystems/event_stream",
     author="Alexandre Marcireau",
     author_email="alexandre.marcireau@gmail.com",
