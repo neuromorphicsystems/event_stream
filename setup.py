@@ -38,7 +38,7 @@ setuptools.setup(
     install_requires=["numpy>=1.24"],
     classifiers=[
         "Programming Language :: Python :: 3",
-        "License :: OSI Approved :: GNU General Public License v3 (GPLv3)",
+        "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
     ],
     ext_modules=[
